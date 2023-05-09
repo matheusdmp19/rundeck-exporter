@@ -110,16 +110,15 @@ class RundeckMetricsCollector(object):
                     job_exported['status_last_succeeded_execution'] = status['succeeded']
                     job_exported['status_last_failed_execution'] = status['failed']
                     job_exported['status_last_aborted_execution'] = status['aborted']
-                if i == 1:
+                if i == 0 or i == 1:
                     job_exported['status_last_two_succeededs_executions'] = status['succeeded']
                     job_exported['status_last_two_faileds_executions'] = status['failed']
                     job_exported['status_last_two_aborteds_executions'] = status['aborted']
-                if i == 14:
-                    job_exported['status_last_fifteen_succeededs_executions'] = status['succeeded']
-                    job_exported['status_last_fifteen_faileds_executions'] = status['failed']
-                    job_exported['status_last_fifteen_aborteds_executions'] = status['aborted']
-            
 
+                job_exported['status_last_fifteen_succeededs_executions'] = status['succeeded']
+                job_exported['status_last_fifteen_faileds_executions'] = status['failed']
+                job_exported['status_last_fifteen_aborteds_executions'] = status['aborted']
+            
             ''' status_last_succeeded_execution metric'''
             status_last_succeeded_execution = GaugeMetricFamily("status_last_succeeded_execution", 
                                                                 "Status of the last successful execution of the job",

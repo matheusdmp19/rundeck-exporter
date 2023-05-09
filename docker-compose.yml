@@ -8,15 +8,15 @@ services:
       RUNDECK_GRAILS_URL: http://localhost:4440
     tty: true
     volumes:
-      - ./data/rundeck:/home/rundeck/server/data
-      - ./configs/rundeck/remco/templates/rundeck-config.properties:/etc/remco/templates/rundeck-config.properties
+      - ./.docker/data/rundeck:/home/rundeck/server/data
+      - ./.docker/configs/rundeck/remco/templates/rundeck-config.properties:/etc/remco/templates/rundeck-config.properties
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4440"]
       interval: 30s
       timeout: 10s
       retries: 5
   rundeck_exporter:
-    image: phsmith/rundeck-exporter:latest
+    build: .
     ports:
       - 9620:9620
     environment:
@@ -24,7 +24,7 @@ services:
       RUNDECK_EXPORTER_HOST: 0.0.0.0
       RUNDECK_EXPORTER_PORT: 9620
       RUNDECK_URL: "http://rundeck:4440"
-      RUNDECK_TOKEN: "PLACE_RUNDECK_API_TOKEN_HERE"
+      RUNDECK_TOKEN: "k6nz3bEMAUt9hfaQvnosjpOoVP2czGYJ"
       RUNDECK_API_VERSION: 40
       RUNDECK_SKIP_SSL: "False"
       RUNDECK_PROJECTS_EXECUTIONS: "True"
@@ -43,8 +43,8 @@ services:
     ports:
       - 9090:9090
     volumes:
-      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./data/prometheus:/prometheus
+      - ./.docker/configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./.docker/data/prometheus:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -53,8 +53,8 @@ services:
   grafana:
     image: grafana/grafana:latest
     volumes:
-      - ./data/grafana:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning
+      - ./.docker/data/grafana:/var/lib/grafana
+      - ./.docker/configs/grafana/provisioning:/etc/grafana/provisioning
     ports:
       - 3000:3000
     depends_on:

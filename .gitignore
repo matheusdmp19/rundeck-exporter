@@ -1,0 +1,9 @@
+__cache__
+
+### Docker-Compose ###
+.docker/data/grafana/*
+!.docker/data/grafana/.gitkeep
+.docker/data/prometheus/*
+!.docker/data/prometheus/.gitkeep
+.docker/data/rundeck/*
+!.docker/data/rundeck/.gitkeep

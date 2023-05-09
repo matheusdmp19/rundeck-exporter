@@ -24,13 +24,6 @@ from prometheus_client.core import (
     REGISTRY
 )
 
-__author__ = 'Phillipe Smith'
-__author_email__ = 'phsmithcc@gmail.com'
-__app__ = 'rundeck_exporter'
-__version__ = open('VERSION').read()
-
-print(__version__)
-
 # Disable InsecureRequestWarning
 requests.urllib3.disable_warnings()
 
@@ -72,10 +65,6 @@ class RundeckMetricsCollector(object):
     args_parser.add_argument('--debug',
                              help='Enable debug mode.',
                              default=getenv('RUNDECK_EXPORTER_DEBUG', False),
-                             action='store_true'
-                             )
-    args_parser.add_argument('-v', '--version',
-                             help='Shows rundeck_exporter current release version.',
                              action='store_true'
                              )
     args_parser.add_argument('--host',
@@ -166,9 +155,6 @@ class RundeckMetricsCollector(object):
     logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=loglevel)
 
     def __init__(self):
-        if self.args.version:
-            print(f'{__app__} {__version__}')
-            exit(0)
 
         if not self.args.rundeck_url \
             or not (self.rundeck_token or self.args.rundeck_username and self.rundeck_userpassword):

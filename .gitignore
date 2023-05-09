@@ -1,4 +1,4 @@
-__cache__
+.src/__cache__
 
 ### Docker-Compose ###
 .docker/data/grafana/*

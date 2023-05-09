@@ -17,8 +17,6 @@ export RUNDECK_API_VERSION=40
 log_level = logging.INFO
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=log_level)
 
-# totalRandomNumber = 0
-
 class RundeckMetricsCollector(object):
     '''Class for collect Rundeck metrics info'''
 
@@ -36,10 +34,11 @@ class RundeckMetricsCollector(object):
 
     def collect(self):
 
-        ''' Job scheduling information metric  '''
+        ''' Job Metrics'''        
         jobs = self.rd.listJobs()
         for job in jobs:
 
+            ''' Job scheduling information '''
             job_definition = self.rd.getJobDefinition(job['id'])
 
             job_exported = {}
@@ -52,37 +51,155 @@ class RundeckMetricsCollector(object):
             job_exported['schedule_minute'] = job_definition['schedule']['time']['minute']
             job_exported['schedule_seconds'] = job_definition['schedule']['time']['seconds']
 
-            labels_values = [job_exported['name'], 
+            default_job_labels = ['job_name',
+                                  'job_id', 
+                                  'project_name',
+                                  'schedule_enabled'
+                                  ]
+            
+    
+
+            default_job_labels_values = [job_exported['name'], 
                              job_exported['id'], 
                              job_exported['project'],
-                             job_exported['schedule_enabled'],
-                             job_exported['schedule_weekday'],
+                             job_exported['schedule_enabled']
+                             ]
+            schedule_labels_values = [job_exported['schedule_weekday'],
                              job_exported['schedule_hour'],
                              job_exported['schedule_minute'],
                              job_exported['schedule_seconds']
                              ]
 
+            ''' Job scheduling information metric'''
             job_scheduling_info = GaugeMetricFamily("job_scheduling_info", "Job scheduling info", 
                                                     labels=
-                                                    self.default_labels +
-                                                    ['job_name', 
-                                                    'job_id', 
-                                                    'project_name',
-                                                    'schedule_enabled', 
-                                                    'job_schedule_weekday',
+                                                    self.default_labels + default_job_labels +
+                                                    ['job_schedule_weekday',
                                                     'job_schedule_hour',
                                                     'job_schedule_minute',
                                                     'job_schedule_seconds'                                                 
                                                     ])
-            job_scheduling_info.add_metric(self.default_labels_values + labels_values, 1.0)
+            job_scheduling_info.add_metric(self.default_labels_values + default_job_labels_values + schedule_labels_values, 1.0)
+            
+            ''' Last executions status per Job '''
+            list_executions = self.rd.getjobExecutions(job['id'], 15)
+            
+            status = {'succeeded': 0, 'failed': 0, 'aborted': 0, 'running': 0}
+            
+            job_exported['status_last_succeeded_execution'] = 0
+            job_exported['status_last_two_succeededs_executions'] = 0
+            job_exported['status_last_fifteen_succeededs_executions'] = 0
+
+            job_exported['status_last_failed_execution'] = 0
+            job_exported['status_last_two_faileds_executions'] = 0
+            job_exported['status_last_fifteen_faileds_executions'] = 0
+
+            job_exported['status_last_aborted_execution'] = 0
+            job_exported['status_last_two_aborteds_executions'] = 0
+            job_exported['status_last_fifteen_aborteds_executions'] = 0
+            
+            for i, execution in enumerate(list_executions):
+
+                if execution['status'] == 'succeeded':
+                    status['succeeded'] += 1
+                if execution['status'] == 'failed':
+                    status['failed'] += 1
+                if execution['status'] == 'aborted':
+                    status['aborted'] += 1
+                if execution['status'] == 'running':
+                    status['running'] += 1
+
+                if i == 0:
+                    job_exported['status_last_succeeded_execution'] = status['succeeded']
+                    job_exported['status_last_failed_execution'] = status['failed']
+                    job_exported['status_last_aborted_execution'] = status['aborted']
+                if i == 1:
+                    job_exported['status_last_two_succeededs_executions'] = status['succeeded']
+                    job_exported['status_last_two_faileds_executions'] = status['failed']
+                    job_exported['status_last_two_aborteds_executions'] = status['aborted']
+                if i == 14:
+                    job_exported['status_last_fifteen_succeededs_executions'] = status['succeeded']
+                    job_exported['status_last_fifteen_faileds_executions'] = status['failed']
+                    job_exported['status_last_fifteen_aborteds_executions'] = status['aborted']
+            
+
+            ''' status_last_succeeded_execution metric'''
+            status_last_succeeded_execution = GaugeMetricFamily("status_last_succeeded_execution", 
+                                                                "Status of the last successful execution of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_succeeded_execution.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_succeeded_execution'])
+            
+            ''' status_last_two_succeededs_executions metric'''
+            status_last_two_succeededs_executions = GaugeMetricFamily("status_last_two_succeededs_executions", 
+                                                                "Status of the last two successful executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_two_succeededs_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_two_succeededs_executions'])
+            
+            ''' status_last_fifteen_succeededs_executions metric'''
+            status_last_fifteen_succeededs_executions = GaugeMetricFamily("status_last_fifteen_succeededs_executions", 
+                                                                "Status of the last fifteen successful executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_fifteen_succeededs_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_fifteen_succeededs_executions'])
+
+            ''' status_last_failed_execution metric'''
+            status_last_failed_execution = GaugeMetricFamily("status_last_failed_execution", 
+                                                                "Status of the last failed execution of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_failed_execution.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_failed_execution'])
+
+            ''' status_last_two_faileds_executions metric'''
+            status_last_two_faileds_executions = GaugeMetricFamily("status_last_two_faileds_executions", 
+                                                                "Status of the last two failed executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_two_faileds_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_two_faileds_executions'])
+
+            ''' status_last_fifteen_faileds_executions metric'''
+            status_last_fifteen_faileds_executions = GaugeMetricFamily("status_last_fifteen_faileds_executions", 
+                                                                "Status of the last fifteen failed executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_fifteen_faileds_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_fifteen_faileds_executions'])
+            
+            ''' status_last_aborted_execution metric'''
+            status_last_aborted_execution = GaugeMetricFamily("status_last_aborted_execution", 
+                                                                "Status of the last aborted execution of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_aborted_execution.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_aborted_execution'])
+            
+            ''' status_last_two_aborteds_executions metric'''
+            status_last_two_aborteds_executions = GaugeMetricFamily("status_last_two_aborteds_executions", 
+                                                                "Status of the last two aborted executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_two_aborteds_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_two_aborteds_executions'])
+            
+            ''' status_last_fifteen_aborteds_executions metric'''
+            status_last_fifteen_aborteds_executions = GaugeMetricFamily("status_last_fifteen_aborteds_executions", 
+                                                                "Status of the last fifteen aborted executions of the job",
+                                                                labels = self.default_labels + default_job_labels)
+            status_last_fifteen_aborteds_executions.add_metric(self.default_labels_values + default_job_labels_values, 
+                                                       job_exported['status_last_fifteen_aborteds_executions'])
             
             yield job_scheduling_info
+            yield status_last_succeeded_execution
+            yield status_last_two_succeededs_executions
+            yield status_last_fifteen_succeededs_executions
+            yield status_last_failed_execution
+            yield status_last_two_faileds_executions
+            yield status_last_fifteen_faileds_executions
+            yield status_last_aborted_execution
+            yield status_last_two_aborteds_executions
+            yield status_last_fifteen_aborteds_executions
 
-        # count = CounterMetricFamily("random_number_2", "A random number 2.0", labels=['randomNum'])
-        # global totalRandomNumber
-        # totalRandomNumber += 1
-        # count.add_metric(['random_num'], totalRandomNumber)
-        # yield count
+        # PENDENTE:
+        # Jobs em execução
+        # Inicio da execução ou tempo da execução atual
 
     def run():
 
@@ -93,7 +210,7 @@ class RundeckMetricsCollector(object):
             start_http_server(9622, registry=REGISTRY)
 
             while True:
-                sleep(1)
+                sleep(10)
         except OSError as os_error:
             logging.critical(f'Error starting exporter: {os_error}')
         except KeyboardInterrupt:

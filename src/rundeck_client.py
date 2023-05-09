@@ -75,3 +75,10 @@ class Rundeck(object):
         job_definition = self.getDataFrom(endpoint, accept_format='yaml')
         
         return job_definition[0]
+
+    def getjobExecutions(self, job_id, results_total) -> list:
+
+        endpoint = f'/job/{job_id}/executions?max={results_total}'
+        job_executions = self.getDataFrom(endpoint)
+        
+        return job_executions['executions']

@@ -76,9 +76,16 @@ class Rundeck(object):
         
         return job_definition[0]
 
-    def getjobExecutions(self, job_id, results_total) -> list:
+    def getJobExecutions(self, job_id, results_total) -> list:
 
         endpoint = f'/job/{job_id}/executions?max={results_total}'
         job_executions = self.getDataFrom(endpoint)
         
         return job_executions['executions']
+
+    def getJobRunningExecutions(self, project_name, job_id, results_total):
+
+        endpoint = f'/project/{project_name}/executions/running?jobIdFilter={job_id}&total={results_total}'
+        job_executions = self.getDataFrom(endpoint)
+        
+        return job_executions

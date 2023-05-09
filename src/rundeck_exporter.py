@@ -5,7 +5,7 @@ import logging
 
 from rundeck_client import Rundeck
 
-from prometheus_client.core import GaugeMetricFamily, REGISTRY, CounterMetricFamily
+from prometheus_client.core import GaugeMetricFamily, REGISTRY
 from prometheus_client import start_http_server
 
 '''
@@ -56,9 +56,6 @@ class RundeckMetricsCollector(object):
                                   'project_name',
                                   'schedule_enabled'
                                   ]
-            
-    
-
             default_job_labels_values = [job_exported['name'], 
                              job_exported['id'], 
                              job_exported['project'],
@@ -82,7 +79,7 @@ class RundeckMetricsCollector(object):
             job_scheduling_info.add_metric(self.default_labels_values + default_job_labels_values + schedule_labels_values, 1.0)
             
             ''' Last executions status per Job '''
-            list_executions = self.rd.getjobExecutions(job['id'], 15)
+            list_executions = self.rd.getJobExecutions(job['id'], 15)
             
             status = {'succeeded': 0, 'failed': 0, 'aborted': 0, 'running': 0}
             
@@ -186,6 +183,59 @@ class RundeckMetricsCollector(object):
             status_last_fifteen_aborteds_executions.add_metric(self.default_labels_values + default_job_labels_values, 
                                                        job_exported['status_last_fifteen_aborteds_executions'])
             
+
+            ''' Running Executions and date-started info'''
+            job_exported['running_execution'] = 0
+            job_exported['execution_avg_duration'] = 0
+            job_exported['execution_start_date'] = 0
+            job_exported['running_execution_id'] = 0
+            
+            running_execution = self.rd.getJobRunningExecutions(job_exported['project'], job_exported['id'], 1)
+            if len(running_execution['executions']) > 0:
+                job_exported['running_execution'] = 1.0
+                job_exported['execution_avg_duration'] = running_execution['executions'][0]['job']['averageDuration']
+                job_exported['execution_start_date'] = running_execution['executions'][0]['date-started']['unixtime']
+                job_exported['running_execution_id'] = str(running_execution['executions'][0]['id'])
+
+                ''' job_running_execution metric'''
+                job_running_execution = GaugeMetricFamily("job_running_execution",
+                                                          "Job Running Execution",
+                                                          labels = self.default_labels + 
+                                                          default_job_labels +
+                                                          ['execution_id'])
+                
+                job_running_execution.add_metric(self.default_labels_values + 
+                                                 default_job_labels_values + 
+                                                 [job_exported['running_execution_id']], 1.0)
+                
+                ''' job_running_execution_avg_duration metric'''
+                job_running_execution_avg_duration = GaugeMetricFamily("job_running_execution_avg_duration", 
+                                                                    "Job Running Execution Average Duration",
+                                                                    labels = self.default_labels + 
+                                                                        default_job_labels +
+                                                                        ['execution_id'])
+                job_running_execution_avg_duration.add_metric(self.default_labels_values + 
+                                                 default_job_labels_values + 
+                                                 [job_exported['running_execution_id']], 
+                                                 job_exported['execution_avg_duration'])
+                
+                ''' job_running_execution_start_date metric'''
+                job_running_execution_start_date = GaugeMetricFamily("job_running_execution_start_date", 
+                                                                    "Job Running Execution Start Date",
+                                                                    labels = self.default_labels + 
+                                                                        default_job_labels +
+                                                                        ['execution_id'])
+                job_running_execution_start_date.add_metric(self.default_labels_values + 
+                                                 default_job_labels_values + 
+                                                 [job_exported['running_execution_id']], 
+                                                 job_exported['execution_start_date'])
+                
+                # Exposing metrics
+                yield job_running_execution
+                yield job_running_execution_avg_duration
+                yield job_running_execution_start_date
+            
+            # Exposing metrics
             yield job_scheduling_info
             yield status_last_succeeded_execution
             yield status_last_two_succeededs_executions
@@ -197,10 +247,6 @@ class RundeckMetricsCollector(object):
             yield status_last_two_aborteds_executions
             yield status_last_fifteen_aborteds_executions
 
-        # PENDENTE:
-        # Jobs em execução
-        # Inicio da execução ou tempo da execução atual
-
     def run():
 
         try:
@@ -210,7 +256,7 @@ class RundeckMetricsCollector(object):
             start_http_server(9622, registry=REGISTRY)
 
             while True:
-                sleep(10)
+                sleep(1)
         except OSError as os_error:
             logging.critical(f'Error starting exporter: {os_error}')
         except KeyboardInterrupt:
